@@ -184,9 +184,7 @@ def prodAssoc (α β γ : Type*)
     [LinearOrder α] [LinearOrder β] [LinearOrder γ] : (α ×ₗ β) ×ₗ γ ≃o α ×ₗ β ×ₗ γ :=
   { toEquiv := .trans ofLex <| .trans (.prodCongr ofLex <| .refl _) <|
       .trans (.prodAssoc α β γ) <| .trans (.prodCongr (.refl _) toLex) <| toLex
-    map_rel_iff' := by
-      simp only [Prod.Lex.le_iff, Prod.Lex.lt_iff, Equiv.trans_apply, Equiv.prodCongr_apply,
-      Equiv.prodAssoc_apply]; grind [EmbeddingLike.apply_eq_iff_eq, ofLex_toLex]
+    map_rel_iff' := by simp [Prod.Lex.le_iff,Prod.Lex.lt_iff]; grind
    }
 
 /-- `Equiv.sumProdDistrib` promoted to an order isomorphism of lexicographic products. -/
@@ -201,6 +199,8 @@ def sumProdDistrib (α β γ : Type*)
 def prodCongr {α β γ δ : Type*} [LinearOrder α] [LinearOrder β]
     [LinearOrder γ] [LinearOrder δ] (ea : α ≃o β) (eb : γ ≃o δ) : α ×ₗ γ ≃o β ×ₗ δ where
   toEquiv := ofLex.trans ((Equiv.prodCongr ea eb).trans toLex)
-  map_rel_iff' := by simp [Prod.Lex.le_iff]
+  map_rel_iff' := by
+    intro a b
+    simp [Prod.Lex.le_iff, OrderIso.lt_iff_lt]
 
 end Prod.Lex
