@@ -244,6 +244,7 @@ structure LinOrd where
   (carrier : Type*)
   [str : LinearOrder carrier]
 
+
 attribute [instance] LinOrd.str
 
 initialize_simps_projections LinOrd (carrier → coe, -str)
