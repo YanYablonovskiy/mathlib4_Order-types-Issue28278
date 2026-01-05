@@ -143,6 +143,16 @@ theorem sumLexIicIoi_symm_apply_Iic (a : Iic x) : (sumLexIicIoi x).symm a = Sum.
 theorem sumLexIicIoi_symm_apply_Ioi (a : Ioi x) : (sumLexIicIoi x).symm a = Sum.inr a :=
   sumLexIicIoi_symm_apply_of_lt a.2
 
+lemma sumLexEmpty (α : Type*) {β : Type*} [LinearOrder α] [IsEmpty β] [LinearOrder β] :
+    Nonempty (Lex (α ⊕ β) ≃o α) :=
+  ⟨OrderIso.ofRelIsoLT ((Sum.Lex.toLexRelIsoLT (α := α) (β := β)).symm.trans
+    (RelIso.sumLexEmpty (β := β) (α := α) (r := (· < ·)) (s := (· < ·))))⟩
+
+lemma emptySumLex (α : Type*) {β : Type*} [LinearOrder α] [IsEmpty β] [LinearOrder β] :
+    Nonempty (Lex (β ⊕ α) ≃o α) :=
+  ⟨OrderIso.ofRelIsoLT ((Sum.Lex.toLexRelIsoLT (α := β) (β := α)).trans
+    (RelIso.emptySumLex (β := α) (α := β) (r := (· < ·)) (s := (· < ·))))⟩
+
 end OrderIso
 
 /-! ### Degenerate products -/
@@ -184,8 +194,17 @@ def prodAssoc (α β γ : Type*)
     [LinearOrder α] [LinearOrder β] [LinearOrder γ] : (α ×ₗ β) ×ₗ γ ≃o α ×ₗ β ×ₗ γ :=
   { toEquiv := .trans ofLex <| .trans (.prodCongr ofLex <| .refl _) <|
       .trans (.prodAssoc α β γ) <| .trans (.prodCongr (.refl _) toLex) <| toLex
-    map_rel_iff' := by simp [Prod.Lex.le_iff,Prod.Lex.lt_iff]; grind
+    map_rel_iff' := by
+      simp only [Prod.Lex.le_iff, Prod.Lex.lt_iff, Equiv.trans_apply, Equiv.prodCongr_apply,
+      Equiv.prodAssoc_apply]; grind [EmbeddingLike.apply_eq_iff_eq, ofLex_toLex]
    }
+
+/-
+ simp only [Equiv.trans_apply, Equiv.prodCongr_apply, Equiv.coe_refl,
+ Equiv.prodAssoc_apply, map_fst, map_snd, id_eq,
+    map_apply, ge_iff_le, le_iff, ofLex_toLex, lt_iff,
+    Lex.forall, Prod.forall, EmbeddingLike.apply_eq_iff_eq, mk.injEq]
+-/
 
 /-- `Equiv.sumProdDistrib` promoted to an order isomorphism of lexicographic products. -/
 def sumProdDistrib (α β γ : Type*)
