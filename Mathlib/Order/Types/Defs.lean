@@ -43,9 +43,8 @@ public noncomputable section
 
 open Function Set Equiv Order
 
-universe u v w w'
-
-variable {α : Type u} {β : Type v} {γ : Type w} {δ : Type w'}
+universe u v
+variable {α β : Type u} {δ : Sort v}
 
 /-- Equivalence relation on linear orders on arbitrary types in universe `u`, given by order
 isomorphism. -/
@@ -90,11 +89,11 @@ instance : One OrderType where
 @[simp]
 theorem type_toType (o : OrderType) : type o.ToType = o := surjInv_eq Quot.exists_rep o
 
-theorem type_eq_type {α β : Type u} [LinearOrder α] [LinearOrder β] :
+theorem type_eq_type [LinearOrder α] [LinearOrder β] :
     type α = type β ↔ Nonempty (α ≃o β) :=
   Quotient.eq'
 
-theorem type_congr {α β} [LinearOrder α]
+theorem type_congr [LinearOrder α]
     [LinearOrder β] (h : α ≃o β) : type α = type β :=
   type_eq_type.2 ⟨h⟩
 
@@ -158,14 +157,14 @@ theorem inductionOn₃ {C : OrderType → OrderType → OrderType → Prop} (o�
 
 /-- To define a function on `OrderType`, it suffices to define it on all linear orders.
 -/
-def liftOn {δ : Sort v} (o : OrderType) (f : ∀ (α) [LinearOrder α], δ)
+def liftOn (o : OrderType) (f : ∀ (α) [LinearOrder α], δ)
     (c : ∀ (α) [LinearOrder α] (β) [LinearOrder β],
       type α = type β → f α = f β) : δ :=
   Quotient.liftOn o (fun w ↦ f w)
     fun w₁ w₂ h ↦ c w₁ w₂ (Quotient.sound h)
 
 @[simp]
-theorem liftOn_type {δ : Sort v} (f : ∀ (α) [LinearOrder α], δ)
+theorem liftOn_type (f : ∀ (α) [LinearOrder α], δ)
     (c : ∀ (α) [LinearOrder α] (β) [LinearOrder β],
       type α = type β → f α = f β) {γ} [inst : LinearOrder γ] :
     liftOn (type γ) f c = f γ := by rfl
@@ -188,16 +187,14 @@ instance : Preorder OrderType where
 instance : NeZero (1 : OrderType) :=
   ⟨type_ne_zero⟩
 
-theorem type_le_type_iff {α β : Type u} [LinearOrder α]
-    [LinearOrder β] : type α ≤ type β ↔ Nonempty (α ↪o β) :=
+theorem type_le_type_iff [LinearOrder α][LinearOrder β] : type α ≤ type β ↔ Nonempty (α ↪o β) :=
   .rfl
 
-theorem type_le_type {α β}
-    [LinearOrder α] [LinearOrder β] (h : α ↪o β) : type α ≤ type β :=
+theorem type_le_type [LinearOrder α] [LinearOrder β] (h : α ↪o β) : type α ≤ type β :=
   ⟨h⟩
 
-theorem type_lt_type {α β}
-    [LinearOrder α] [LinearOrder β] (h : α ↪o β) (hne : IsEmpty (β ↪o α)) : type α < type β :=
+theorem type_lt_type [LinearOrder α] [LinearOrder β]
+    (h : α ↪o β) (hne : IsEmpty (β ↪o α)) : type α < type β :=
   ⟨⟨h⟩, not_nonempty_iff.mpr hne⟩
 
 alias _root_.OrderEmbedding.type_le_type := type_le_type
