@@ -44,7 +44,7 @@ public noncomputable section
 open Function Set Equiv Order
 
 universe u v
-variable {α β : Type u} {δ : Sort v}
+variable {α β : Type u} [LinearOrder α] [LinearOrder β] {δ : Sort v}
 
 /-- Equivalence relation on linear orders on arbitrary types in universe `u`, given by order
 isomorphism. -/
@@ -89,38 +89,36 @@ instance : One OrderType where
 @[simp]
 theorem type_toType (o : OrderType) : type o.ToType = o := surjInv_eq Quot.exists_rep o
 
-theorem type_eq_type [LinearOrder α] [LinearOrder β] :
-    type α = type β ↔ Nonempty (α ≃o β) :=
+theorem type_eq_type : type α = type β ↔ Nonempty (α ≃o β) :=
   Quotient.eq'
 
-theorem type_congr [LinearOrder α]
-    [LinearOrder β] (h : α ≃o β) : type α = type β :=
+theorem type_congr (h : α ≃o β) : type α = type β :=
   type_eq_type.2 ⟨h⟩
 
 alias _root_.OrderIso.type_congr := type_congr
 
 @[simp]
-theorem type_of_isEmpty [LinearOrder α] [IsEmpty α] : type α = 0 :=
+theorem type_of_isEmpty [IsEmpty α] : type α = 0 :=
   type_congr <| .ofIsEmpty α PEmpty
 
-theorem type_eq_zero [LinearOrder α] : type α = 0 ↔ IsEmpty α :=
+theorem type_eq_zero : type α = 0 ↔ IsEmpty α :=
   ⟨fun h ↦
     let ⟨s⟩ := type_eq_type.1 h
     s.toEquiv.isEmpty,
     @type_of_isEmpty α _⟩
 
-theorem type_ne_zero_iff [LinearOrder α] : type α ≠ 0 ↔ Nonempty α := by simp [type_eq_zero]
+theorem type_ne_zero_iff : type α ≠ 0 ↔ Nonempty α := by simp [type_eq_zero]
 
 @[simp]
-theorem type_ne_zero [LinearOrder α] [h : Nonempty α] : type α ≠ 0 :=
+theorem type_ne_zero [h : Nonempty α] : type α ≠ 0 :=
   type_ne_zero_iff.2 h
 
 @[simp]
-theorem type_of_unique [LinearOrder α] [Nonempty α] [Subsingleton α] : type α = 1 := by
+theorem type_of_unique [Nonempty α] [Subsingleton α] : type α = 1 := by
   cases nonempty_unique α
   exact (OrderIso.ofUnique α _).type_congr
 
-theorem type_eq_one [LinearOrder α] : type α = 1 ↔ Nonempty (Unique α) :=
+theorem type_eq_one : type α = 1 ↔ Nonempty (Unique α) :=
   ⟨fun h ↦ let ⟨s⟩ := type_eq_type.1 h; ⟨s.toEquiv.unique⟩,
     fun ⟨_⟩ ↦ type_of_unique⟩
 
@@ -187,14 +185,13 @@ instance : Preorder OrderType where
 instance : NeZero (1 : OrderType) :=
   ⟨type_ne_zero⟩
 
-theorem type_le_type_iff [LinearOrder α] [LinearOrder β] : type α ≤ type β ↔ Nonempty (α ↪o β) :=
+theorem type_le_type_iff : type α ≤ type β ↔ Nonempty (α ↪o β) :=
   .rfl
 
-theorem type_le_type [LinearOrder α] [LinearOrder β] (h : α ↪o β) : type α ≤ type β :=
+theorem type_le_type (h : α ↪o β) : type α ≤ type β :=
   ⟨h⟩
 
-theorem type_lt_type [LinearOrder α] [LinearOrder β]
-    (h : α ↪o β) (hne : IsEmpty (β ↪o α)) : type α < type β :=
+theorem type_lt_type (h : α ↪o β) (hne : IsEmpty (β ↪o α)) : type α < type β :=
   ⟨⟨h⟩, not_nonempty_iff.mpr hne⟩
 
 alias _root_.OrderEmbedding.type_le_type := type_le_type
