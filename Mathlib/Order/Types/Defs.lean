@@ -187,7 +187,7 @@ instance : Preorder OrderType where
 instance : NeZero (1 : OrderType) :=
   ⟨type_ne_zero⟩
 
-theorem type_le_type_iff [LinearOrder α][LinearOrder β] : type α ≤ type β ↔ Nonempty (α ↪o β) :=
+theorem type_le_type_iff [LinearOrder α] [LinearOrder β] : type α ≤ type β ↔ Nonempty (α ↪o β) :=
   .rfl
 
 theorem type_le_type [LinearOrder α] [LinearOrder β] (h : α ↪o β) : type α ≤ type β :=
