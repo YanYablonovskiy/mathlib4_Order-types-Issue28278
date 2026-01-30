@@ -112,6 +112,7 @@ theorem type_eq_zero [LinearOrder α] : type α = 0 ↔ IsEmpty α :=
 
 theorem type_ne_zero_iff [LinearOrder α] : type α ≠ 0 ↔ Nonempty α := by simp [type_eq_zero]
 
+@[simp]
 theorem type_ne_zero [LinearOrder α] [h : Nonempty α] : type α ≠ 0 :=
   type_ne_zero_iff.2 h
 
