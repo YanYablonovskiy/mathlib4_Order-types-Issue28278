@@ -101,11 +101,11 @@ alias _root_.OrderIso.type_congr := type_congr
 theorem type_of_isEmpty [IsEmpty α] : type α = 0 :=
   type_congr <| .ofIsEmpty α PEmpty
 
-theorem type_eq_zero : type α = 0 ↔ IsEmpty α :=
-  ⟨fun h ↦
+theorem type_eq_zero : type α = 0 ↔ IsEmpty α where
+  mp h :=
     let ⟨s⟩ := type_eq_type.1 h
-    s.toEquiv.isEmpty,
-    @type_of_isEmpty α _⟩
+    s.toEquiv.isEmpty
+  mpr := @type_of_isEmpty α _
 
 theorem type_ne_zero_iff : type α ≠ 0 ↔ Nonempty α := by simp [type_eq_zero]
 
