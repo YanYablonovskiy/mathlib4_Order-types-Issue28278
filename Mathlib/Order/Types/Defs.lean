@@ -178,7 +178,7 @@ theorem liftOn_type (f : ∀ (α) [LinearOrder α], δ)
 theorem liftOn₂_type {α : Type u} {β : Type v} {δ : Type*} [LinearOrder α] [LinearOrder β]
      (f : ∀ (α) [LinearOrder α] (β) [LinearOrder β], δ)
      (c : ∀ (α₁) [LinearOrder α₁] (β₁) [LinearOrder β₁] (α₂) [LinearOrder α₂] (β₂) [LinearOrder β₂],
-      type α₁ = type α₂ → type β₁ = type β₂ → f α₁ β₁ = f α₂ β₂) :
+       type α₁ = type α₂ → type β₁ = type β₂ → f α₁ β₁ = f α₂ β₂) :
     liftOn₂ (type α) (type β) f c = f α β := by rfl
 
 /-! ### The order on `OrderType` -/

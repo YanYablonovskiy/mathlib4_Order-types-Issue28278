@@ -105,7 +105,7 @@ instance : Monoid OrderType.{u} where
       exact (Prod.Lex.uniqueProd PUnit α).type_congr)
 
 instance (n : Nat) : OfNat OrderType n where
- ofNat := Fin n |> type
+  ofNat := Fin n |> type
 
 instance : LeftDistribClass OrderType where
   left_distrib a b c := by
