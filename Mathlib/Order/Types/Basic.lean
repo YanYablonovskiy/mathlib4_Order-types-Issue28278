@@ -62,15 +62,7 @@ instance : HAdd OrderType.{u} OrderType.{v} OrderType.{max u v} where
 
 @[simp]
 lemma type_lex_sum (α : Type u) (β : Type v) [LinearOrder α] [LinearOrder β] :
-    type (α ⊕ₗ β) = type α + type β :=
-     /- Get stuck on
-
-        type (Lex (α ⊕ β)) = (type α).liftOn₂ (type β) (fun r x s x_1 ↦ type (Lex (r ⊕ s)))
-        instHAdd._proof_1
-
-        can't use old method due to exposed changes.
-     -/
-     sorry
+    type (α ⊕ₗ β) = type α + type β := by rfl
 
 instance : AddMonoid OrderType where
   add_assoc o₁ o₂ o₃ :=
@@ -87,18 +79,18 @@ instance : AddMonoid OrderType where
   nsmul := nsmulRec
 
 instance : Mul OrderType where
-  mul o₁ o₂ := OrderType.liftOn₂ o₁ o₂ (fun r _ s _ ↦ type (r ×ₗ s))
-    fun _ _ _ _ _ _ _ _ ha hb ↦ Prod.Lex.prodLexCongr (Classical.choice <| type_eq_type.mp ha)
-      (Classical.choice <| type_eq_type.mp hb) |> type_congr
+  mul o₁ o₂ := OrderType.liftOn₂ o₁ o₂ (fun r _ s _ ↦ type (s ×ₗ r))
+    fun _ _ _ _ _ _ _ _ ha hb ↦ Prod.Lex.prodLexCongr (Classical.choice <| type_eq_type.mp hb)
+      (Classical.choice <| type_eq_type.mp ha) |> type_congr
 
 instance : HMul OrderType.{u} OrderType.{v} OrderType.{max u v} where
-  hMul o₁ o₂ :=  OrderType.liftOn₂ o₁ o₂ (fun r _ s _ ↦ type (r ×ₗ s))
-    fun _ _ _ _ _ _ _ _ ha hb ↦ Prod.Lex.prodLexCongr (Classical.choice <| type_eq_type.mp ha)
-      (Classical.choice <| type_eq_type.mp hb) |> type_congr
+  hMul o₁ o₂ :=  OrderType.liftOn₂ o₁ o₂ (fun r _ s _ ↦ type (s ×ₗ r))
+    fun _ _ _ _ _ _ _ _ ha hb ↦ Prod.Lex.prodLexCongr (Classical.choice <| type_eq_type.mp hb)
+      (Classical.choice <| type_eq_type.mp ha) |> type_congr
 
 @[simp]
 lemma type_lex_prod (α : Type u) (β : Type v) [LinearOrder α] [LinearOrder β] :
-    type (α ×ₗ β) = type β * type α := sorry
+    type (α ×ₗ β) = type β * type α := by rfl
 
 instance : Monoid OrderType where
   mul_assoc o₁ o₂ o₃ :=
@@ -144,28 +136,25 @@ open Cardinal
 /-- The cardinal of an `OrderType` is the cardinality of any type on which a relation
 with that order type is defined. -/
 @[expose]
-def card : OrderType → Cardinal := sorry
-  --Quotient.map _ fun _ _ ⟨e⟩ ↦ ⟨e.toEquiv⟩
+def card : OrderType → Cardinal :=
+  Quotient.map _ fun _ _ ⟨e⟩ ↦ ⟨e.toEquiv⟩
 
 @[simp]
 theorem card_type [LinearOrder α] : card (type α) = #α :=
-  sorry
+  rfl
 
 @[gcongr]
 theorem card_le_card {o₁ o₂ : OrderType} : o₁ ≤ o₂ → card o₁ ≤ card o₂ :=
-  inductionOn o₁ fun _ ↦ inductionOn o₂ fun _ _ f ↦ by
-    rw [type_le_type_iff] at f
-    have := (Classical.choice f).toEmbedding-- ⟨f.toEmbedding⟩
-    sorry
+  inductionOn o₁ fun _ ↦ inductionOn o₂ fun _ _ ⟨f⟩ ↦ ⟨f.toEmbedding⟩
 
 theorem card_mono : Monotone card := by
  rw [Monotone]; exact @card_le_card
 
 @[simp]
-theorem card_zero : card 0 = 0 := sorry --mk_eq_zero _
+theorem card_zero : card 0 = 0 := mk_eq_zero _
 
 @[simp]
-theorem card_one : card 1 = 1 := sorry --mk_eq_one _
+theorem card_one : card 1 = 1 := mk_eq_one _
 
 end Cardinal
 
