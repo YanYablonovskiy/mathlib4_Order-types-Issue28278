@@ -128,5 +128,3 @@ scoped notation "θ" => OrderType.theta
 recommended_spelling "theta" for "θ" in [theta, «termθ»]
 
 end OrderType
-
-#min_imports
