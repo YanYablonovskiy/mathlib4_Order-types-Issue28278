@@ -6,11 +6,11 @@ Authors: Yan Yablonovskiy
 module
 
 public import Mathlib.Data.Real.Basic
-public import Mathlib.SetTheory.Cardinal.Order
-public import Mathlib.Algebra.Ring.Defs
+public import Mathlib.Order.CompleteBooleanAlgebra
 public import Mathlib.Order.Fin.Basic
+public import Mathlib.Order.Hom.Lex
+public import Mathlib.Order.OmegaCompletePartialOrder
 public import Mathlib.Order.Types.Defs
-public import Mathlib.Order.Interval.Set.Basic
 
 /-!
 
@@ -60,7 +60,7 @@ instance : HAdd OrderType.{u} OrderType.{v} OrderType.{max u v} where
 
 @[simp]
 lemma type_lex_sum (α : Type u) (β : Type v) [LinearOrder α] [LinearOrder β] :
-    type (α ⊕ₗ β) = type α + type β := by rfl
+    type (α ⊕ₗ β) = type α + type β := by simp [HAdd.hAdd]
 
 instance : AddMonoid OrderType.{u} where
   add_assoc o₁ o₂ o₃ :=
@@ -88,7 +88,7 @@ instance : HMul OrderType.{u} OrderType.{v} OrderType.{max u v} where
 
 @[simp]
 lemma type_lex_prod (α : Type u) (β : Type v) [LinearOrder α] [LinearOrder β] :
-    type (α ×ₗ β) = type β * type α := by rfl
+    type (α ×ₗ β) = type β * type α := by simp [HMul.hMul]
 
 instance : Monoid OrderType.{u} where
   mul_assoc o₁ o₂ o₃ :=
@@ -127,33 +127,6 @@ recommended_spelling "eta" for "η" in [eta, «termη»]
 scoped notation "θ" => OrderType.theta
 recommended_spelling "theta" for "θ" in [theta, «termθ»]
 
-section Cardinal
-
-open Cardinal
-
-/-- The cardinal of an `OrderType` is the cardinality of any type on which a relation
-with that order type is defined. -/
-@[expose]
-def card : OrderType → Cardinal :=
-  Quotient.map _ fun _ _ ⟨e⟩ ↦ ⟨e.toEquiv⟩
-
-@[simp]
-theorem card_type {α : Type u} [LinearOrder α] : card (type α) = #α :=
-  rfl
-
-@[gcongr]
-theorem card_le_card {o₁ o₂ : OrderType} : o₁ ≤ o₂ → card o₁ ≤ card o₂ :=
-  inductionOn o₁ fun _ ↦ inductionOn o₂ fun _ _ ⟨f⟩ ↦ ⟨f.toEmbedding⟩
-
-theorem card_mono : Monotone card := by
- rw [Monotone]; exact @card_le_card
-
-@[simp]
-theorem card_zero : card 0 = 0 := mk_eq_zero _
-
-@[simp]
-theorem card_one : card 1 = 1 := mk_eq_one _
-
-end Cardinal
-
 end OrderType
+
+#min_imports

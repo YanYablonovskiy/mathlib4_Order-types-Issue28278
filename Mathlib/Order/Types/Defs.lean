@@ -48,13 +48,12 @@ variable {α β : Type u} [LinearOrder α] [LinearOrder β] {δ : Sort v}
 
 /-- Equivalence relation on linear orders on arbitrary types in universe `u`, given by order
 isomorphism. -/
-@[expose]
 def OrderType.instSetoid : Setoid LinOrd where
   r := fun lin_ord₁ lin_ord₂ ↦ Nonempty (lin_ord₁ ≃o lin_ord₂)
   iseqv := ⟨fun _ ↦ ⟨.refl _⟩, fun ⟨e⟩ ↦ ⟨e.symm⟩, fun ⟨e₁⟩ ⟨e₂⟩ ↦ ⟨e₁.trans e₂⟩⟩
 
 /-- `OrderType.{u}` is the type of linear orders in `Type u`, up to order isomorphism. -/
-@[pp_with_univ, expose]
+@[pp_with_univ]
 def OrderType : Type (u + 1) :=
   Quotient OrderType.instSetoid
 
@@ -74,7 +73,7 @@ instance (o : OrderType) : LinearOrder o.ToType :=
 /-! ### Basic properties of the order type -/
 
 /-- The order type of the linear order on `α`. -/
-@[expose]
+@[no_expose]
 def type (α : Type u) [LinearOrder α] : OrderType :=
   ⟦⟨α⟩⟧
 
@@ -163,7 +162,6 @@ def liftOn (o : OrderType) (f : ∀ (α) [LinearOrder α], δ)
     fun w₁ w₂ h ↦ c w₁ w₂ (Quotient.sound h)
 
 /-- `Quotient.liftOn₂` specialized to `OrderType`. -/
-@[expose]
 def liftOn₂ (o₁ o₂ : OrderType) (f : ∀ (α) [LinearOrder α] (β) [LinearOrder β], δ)
     (c : ∀ (α₁) [LinearOrder α₁] (β₁) [LinearOrder β₁] (α₂) [LinearOrder α₂] (β₂) [LinearOrder β₂],
       type α₁ = type α₂ → type β₁ = type β₂ → f α₁ β₁ = f α₂ β₂) : δ :=
@@ -176,11 +174,19 @@ theorem liftOn_type (f : ∀ (α) [LinearOrder α], δ)
       type α = type β → f α = f β) {γ} [LinearOrder γ] :
     liftOn (type γ) f c = f γ := by rfl
 
+@[simp]
+theorem liftOn₂_type {α : Type u} {β : Type v} {δ : Type*} [LinearOrder α] [LinearOrder β]
+     (f : ∀ (α) [LinearOrder α] (β) [LinearOrder β], δ)
+     (c : ∀ (α₁) [LinearOrder α₁] (β₁) [LinearOrder β₁] (α₂) [LinearOrder α₂] (β₂) [LinearOrder β₂],
+      type α₁ = type α₂ → type β₁ = type β₂ → f α₁ β₁ = f α₂ β₂) :
+    liftOn₂ (type α) (type β) f c = f α β := by rfl
+
 /-! ### The order on `OrderType` -/
 
 /--
 The order is defined so that `type α ≤ type β` iff there exists an order embedding `α ↪o β`.
 -/
+@[no_expose]
 instance : Preorder OrderType where
   le o₁ o₂ :=
     Quotient.liftOn₂ o₁ o₂ (fun r s ↦ Nonempty (r ↪o s))
