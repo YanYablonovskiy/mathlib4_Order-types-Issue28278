@@ -43,9 +43,7 @@ public noncomputable section
 
 namespace OrderType
 
-universe u v w w'
-
-variable {α : Type u} {β : Type v} {γ : Type w} {δ : Type w'}
+universe u v
 
 instance : ZeroLEOneClass OrderType :=
   ⟨OrderType.zero_le _⟩
@@ -64,7 +62,7 @@ instance : HAdd OrderType.{u} OrderType.{v} OrderType.{max u v} where
 lemma type_lex_sum (α : Type u) (β : Type v) [LinearOrder α] [LinearOrder β] :
     type (α ⊕ₗ β) = type α + type β := by rfl
 
-instance : AddMonoid OrderType where
+instance : AddMonoid OrderType.{u} where
   add_assoc o₁ o₂ o₃ :=
     inductionOn₃ o₁ o₂ o₃ fun α _ β _ γ _ ↦ by
       simp only [← type_lex_sum, (OrderIso.sumLexAssoc α β γ).type_congr]
@@ -78,7 +76,7 @@ instance : AddMonoid OrderType where
       exact (OrderIso.sumLexEmpty (β := PEmpty) (α := α)).type_congr)
   nsmul := nsmulRec
 
-instance : Mul OrderType where
+instance : Mul OrderType.{u} where
   mul o₁ o₂ := OrderType.liftOn₂ o₁ o₂ (fun r _ s _ ↦ type (s ×ₗ r))
     fun _ _ _ _ _ _ _ _ ha hb ↦ Prod.Lex.prodLexCongr (Classical.choice <| type_eq_type.mp hb)
       (Classical.choice <| type_eq_type.mp ha) |> type_congr
@@ -92,7 +90,7 @@ instance : HMul OrderType.{u} OrderType.{v} OrderType.{max u v} where
 lemma type_lex_prod (α : Type u) (β : Type v) [LinearOrder α] [LinearOrder β] :
     type (α ×ₗ β) = type β * type α := by rfl
 
-instance : Monoid OrderType where
+instance : Monoid OrderType.{u} where
   mul_assoc o₁ o₂ o₃ :=
     inductionOn₃ o₁ o₂ o₃ fun α _ β _ γ _ ↦ by
       simp only [← type_lex_prod]
@@ -140,7 +138,7 @@ def card : OrderType → Cardinal :=
   Quotient.map _ fun _ _ ⟨e⟩ ↦ ⟨e.toEquiv⟩
 
 @[simp]
-theorem card_type [LinearOrder α] : card (type α) = #α :=
+theorem card_type {α : Type u} [LinearOrder α] : card (type α) = #α :=
   rfl
 
 @[gcongr]
