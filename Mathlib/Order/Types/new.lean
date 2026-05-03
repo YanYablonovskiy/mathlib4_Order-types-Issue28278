@@ -72,9 +72,12 @@ open SimpleGraph Finset
 
 namespace SimpleGraph
 
-variable {V : Type*} [Fintype V] [DecidableEq V]
-variable (G : SimpleGraph V) [DecidableRel G.Adj]
+universe u
 
+variable {V : Type u} [Fintype V] [DecidableEq V]
+
+variable (G : SimpleGraph V) [DecidableRel G.Adj]
+ [∀G' : Subgraph G, Fintype ↑G'.verts] [∀G' : Subgraph G,∀x, DecidablePred fun v_1 ↦ v_1 ∈ G'.neighborSet x]
 
 /-! ### Bridgeless graphs -/
 
@@ -83,6 +86,15 @@ removing any single edge leaves the graph connected. -/
 def IsBridgeless : Prop :=
   ∀⦃v1 v2 : V⦄, s(v1,v2) ∈ G.edgeSet → ¬G.IsBridge s(v1,v2)
 
+
+noncomputable local instance (G' : SimpleGraph V) (u : V) (S : Set (Sym2 V)) : Fintype ↑((G'.deleteEdges S).neighborSet u) :=
+  Fintype.ofFinite ↑((G'.deleteEdges S).neighborSet u)
+
+noncomputable local instance (G' : SimpleGraph V) (v w : V) (W : G'.Walk v w) (w : V) : Decidable (w ∈ W.toSubgraph.spanningCoe.support) := by
+  exact Classical.propDecidable (w ∈ W.toSubgraph.spanningCoe.support)
+
+noncomputable local instance (G' : SimpleGraph V) (v w : V) (W : G'.Walk v w) (u : V) : Fintype ↑(W.toSubgraph.spanningCoe.neighborSet u) := by
+  exact Fintype.ofFinite ↑(W.toSubgraph.spanningCoe.neighborSet u)
 
 -- SimpleGraph.connected_iff_exists_forall_reachable @ Mathlib.Combinatorics.SimpleGraph.Connectivity.Connected
 -- {V : Type u} (G : SimpleGraph V) : G.Connected ↔ ∃ v, ∀ (w : V), G.Reachable v w
@@ -115,17 +127,17 @@ SimpleGraph.mem_edgeSet @ Mathlib.Combinatorics.SimpleGraph.Basic
 
 open SimpleGraph
 
-#check SimpleGraph.minDegree
---exists_minimal_degree_vertex, minDegree_le_degree and le_minDegree_of_forall_le_degree.
-#check exists_minimal_degree_vertex -- ∃ v, G.minDegree = G.degree v
-#check minDegree_le_degree --G.minDegree ≤ G.degree v
-#check le_minDegree_of_forall_le_degree -- (k : ℕ) (h : ∀ (v : V), k ≤ G.degree v) : k ≤ G.minDegree
-#check commonNeighbors
-#check SimpleGraph.neighborSet
-#check SimpleGraph.isBridge_iff_adj_and_not_isEdgeConnected_two
-#check Sym2
+-- #check SimpleGraph.minDegree
+-- --exists_minimal_degree_vertex, minDegree_le_degree and le_minDegree_of_forall_le_degree.
+-- #check exists_minimal_degree_vertex -- ∃ v, G.minDegree = G.degree v
+-- #check minDegree_le_degree --G.minDegree ≤ G.degree v
+-- #check le_minDegree_of_forall_le_degree -- (k : ℕ) (h : ∀ (v : V), k ≤ G.degree v) : k ≤ G.minDegree
+-- #check commonNeighbors
+-- #check SimpleGraph.neighborSet
+-- #check SimpleGraph.isBridge_iff_adj_and_not_isEdgeConnected_two
+-- #check Sym2
 
-#check SimpleGraph.Walk.head_edges_eq_mk_start_snd
+-- #check SimpleGraph.Walk.head_edges_eq_mk_start_snd
 
 /-
 Other way:
@@ -153,27 +165,31 @@ SimpleGraph.Walk.IsPath.of_append_right @ Mathlib.Combinatorics.SimpleGraph.Path
 
 
 -/
-#check Nat.not_lt_of_ge
-#check Nat.pos_iff_ne_zero
-#check Nat.two_pos  -- 0 < 2
-#check Nat.one_pos
-#check Nat.one_lt_two
-#check minDegree_le_degree --  2 ≤ G.degree inst.some
-#check Walk.IsPath
-#check Nat.lt_of_le_of_lt
-#check G.isTree_iff.mpr
+-- #check Nat.not_lt_of_ge
+-- #check Nat.pos_iff_ne_zero
+-- #check Nat.two_pos  -- 0 < 2
+-- #check Nat.one_pos
+-- #check Nat.one_lt_two
+-- #check minDegree_le_degree --  2 ≤ G.degree inst.some
+-- #check Walk.IsPath
+-- #check Nat.lt_of_le_of_lt
+-- #check G.isTree_iff.mpr
+
 
 lemma nonempty_of_deg_ge_two (hdeg : 2 ≤ G.minDegree) : Nonempty V :=
   Classical.not_not.mp <| fun he ↦
     have := not_nonempty_iff.mp he
     Nat.not_lt_of_ge (Eq.subst (motive := fun n ↦ 2 ≤ n) G.minDegree_of_isEmpty hdeg) two_pos
 
+
 lemma nontrivial_of_degree_ge_two (hdeg : 2 ≤ G.minDegree) : Nontrivial V :=
-  G.nontrivial_of_degree_ne_zero (v := (G.nonempty_of_deg_ge_two hdeg).some)
-    (by grind [hdeg.trans (G.minDegree_le_degree (G.nonempty_of_deg_ge_two hdeg).some)])
+  letI v := (G.nonempty_of_deg_ge_two hdeg).some
+  G.nontrivial_of_degree_ne_zero (v := v)
+    (by grind [hdeg.trans (G.minDegree_le_degree v)])
+
 
 /-- A connected graph with minimum degree ≥ 2 is NOT acyclic. -/
-lemma IsBridgeless.of_connected_minDegree_ge_two (hconn : G.Connected)
+lemma IsAcyclic.not_of_connected_minDegree_ge_two (hconn : G.Connected)
     (hdeg : 2 ≤ G.minDegree) : ¬G.IsAcyclic := fun hacyc ↦
   have := G.nontrivial_of_degree_ge_two hdeg;
   Nat.not_lt_of_ge (Eq.subst (motive := fun n ↦ 2 ≤ n)
@@ -274,9 +290,7 @@ lemma SimpleGraph.not_edge_of_not_support {G : SimpleGraph V} (u v : V): u ∉ G
   exact hc v
 
 
-
-#check Set.diff_eq
-lemma test_1 {G' : SimpleGraph V} [∀ u , Fintype ↑((G.deleteEdges G'.edgeSet).neighborSet u)]
+lemma test_1 {G' : SimpleGraph V} [∀ u, ∀ S, Fintype ↑((G.deleteEdges S).neighborSet u)]
     {u : V} (hni : u ∉ G'.support) :
     (G.deleteEdges G'.edgeSet).neighborFinset u = G.neighborFinset u  := by
   ext v
@@ -317,9 +331,9 @@ example {G' : SimpleGraph V} [∀ u , Fintype ↑((G.deleteEdges G'.edgeSet).nei
     --have := G'.degree_eq_zero_iff_notMem_support
     exact (this v).mpr ⟨sorry, G'.not_edge_of_not_support u v hni⟩
 
-open Classical in
-example {G' : SimpleGraph V} [∀ u , Fintype ↑((G.deleteEdges G'.edgeSet).neighborSet u)]
-    {u : V} :
+
+lemma test2 {G' : SimpleGraph V} [∀ u, ∀ S, Fintype ↑((G.deleteEdges S).neighborSet u)]
+    {u : V} [∀ u, Fintype ↑(G'.neighborSet u)] :
     (G.deleteEdges G'.edgeSet).neighborFinset u = G.neighborFinset u \ G'.neighborFinset u  := by
   -- ext v
   -- have (v : V) := @G.deleteEdges_adj _ u v (s := G'.edgeSet)
@@ -343,10 +357,73 @@ example {G' : SimpleGraph V} [∀ u , Fintype ↑((G.deleteEdges G'.edgeSet).nei
       · have t:= (this v).mp hv |>.2
         rw [mem_compl]
         simpa [t]
-    ·
+    · intro hc
+      rw [Finset.mem_inter] at hc
+      obtain ⟨hc1 , hc2⟩ := hc
+      rw [mem_neighborFinset,this v]
+      constructor
+      · rw [ ← mem_neighborFinset]
+        exact hc1
+      · rw [mem_compl] at hc2
+        simp
+        rw [ ← mem_neighborFinset]
+        exact hc2
+
+-- #check Finset.mem_inter
 
 
 
+lemma test3 {G' : SimpleGraph V} [∀ u, ∀ S, Fintype ↑((G.deleteEdges S).neighborSet u)] [∀u , Fintype ↑(G'.neighborSet u)]
+    (hSg : G'.edgeSet ≤ G.edgeSet) (u : V) [Decidable (u ∈ G'.support)] :
+    (G.deleteEdges G'.edgeSet).degree u = if u ∈ G'.support then
+    G.degree u - G'.degree u else G.degree u := by
+  by_cases hs : u ∈ G'.support
+  · simp [hs]
+    rw [SimpleGraph.degree,SimpleGraph.degree,SimpleGraph.degree] at *
+    rw [test2,Finset.card_sdiff_of_subset]
+    intro x hs
+    rw [mem_neighborFinset,← mem_edgeSet] at *
+    exact hSg hs
+  · have (v : V) := @G.deleteEdges_adj _ u v (s := G'.edgeSet)
+    simp [hs]
+    rw [SimpleGraph.degree, SimpleGraph.degree] at *
+    rw [test_1 G hs]
+
+
+-- #check G.neighborSet_subset_support
+
+
+
+lemma del_deg_zero_iff {G' : SimpleGraph V} [∀ u, ∀ S, Fintype ↑((G.deleteEdges S).neighborSet u)] [∀u , Fintype ↑(G'.neighborSet u)]
+    (hSg : G'.edgeSet ≤ G.edgeSet) (u : V) [Decidable (u ∈ G'.support)] :
+    (G.deleteEdges G'.edgeSet).degree u = 0 ↔ ∀v, (G.Adj v u → G'.Adj v u) := by
+  refine ⟨?_ , ?_⟩
+  · intro hd0 v hadjv
+    rw [SimpleGraph.degree,Finset.card_eq_zero] at hd0
+    rw [test2,Finset.sdiff_eq_empty_iff_subset] at hd0
+    rw [G.neighborFinset_def,G'.neighborFinset_def] at hd0
+    rw [Set.toFinset_subset_toFinset] at hd0
+    have t1: G.neighborSet u = {w | G.Adj u w} := by rfl
+    rw [t1] at hd0
+    have t2: G'.neighborSet u = {w | G'.Adj u w} := by rfl
+    rw [t2] at hd0
+    simp at hd0
+    specialize hd0 v (G.adj_comm v u |>.mp hadjv)
+    exact G'.adj_comm u v |>.mp hd0
+  · intro hvfun
+    rw [SimpleGraph.degree,Finset.card_eq_zero]
+    rw [test2,Finset.sdiff_eq_empty_iff_subset]
+    rw [G.neighborFinset_def,G'.neighborFinset_def]
+    rw [Set.toFinset_subset_toFinset]
+    have t1: G.neighborSet u = {w | G.Adj u w} := by rfl
+    intro x hxu
+    rw [t1] at hxu
+    rw [Set.mem_setOf_eq] at hxu
+    have t2: G'.neighborSet u = {w | G'.Adj u w} := by rfl
+    rw [t2]
+    specialize hvfun x (G.adj_comm u x |>.mp hxu)
+    simp
+    exact G'.adj_comm x u |>.mp hvfun
 
 -- example {v : V} {W : G.Walk v v} (hW : W.IsCycle)
 --     [∀ u , Fintype ↑((G.deleteEdges W.edgeSet).neighborSet u)] (u : V):
@@ -371,29 +448,609 @@ example {G' : SimpleGraph V} [∀ u , Fintype ↑((G.deleteEdges G'.edgeSet).nei
 --         exact (this v).mpr ⟨adj, W.not_mem_edges_of_not_fst_mem_support hs⟩
 --     rw [this]
 
+example {v : V} {W : G.Walk v v} : W.edgeSet ⊆ G.edgeSet := by
+  intro x hxe
+  exact W.edges_subset_edgeSet hxe
+
+example {v : V} {W : G.Walk v v} :   W.toSubgraph.spanningCoe.edgeSet = W.edgeSet := by
+  simp
+
+-- #check SimpleGraph.induce
+
+-- #check SimpleGraph.fromEdgeSet_edgeSet
+-- #check Subgraph.neighborSet
+-- #check Walk.recOn
+-- #check Walk.brecOn
+-- #check G.Subgraph
+
+lemma t5 {u : V} {p : G.Walk u u} (ht : p.IsTrail)  (x : V)-- [∀ v w u, ∀ p : G.Walk v w,  Fintype ↑(p.toSubgraph.neighborSet u)]
+    : haveI : Fintype ↑(p.toSubgraph.neighborSet x) :=
+        SimpleGraph.Subgraph.instFintypeElemNeighborSetOfVertsOfDecidablePredMemSet p.toSubgraph x
+    Even (p.toSubgraph.degree x) := by
+  have t1 := ht.even_countP_edges_iff x |>.mpr (fun hc ↦ (hc (Eq.refl u)).elim)
+  rw [Subgraph.degree]
+  have : List.countP (fun e ↦ decide (x ∈ e)) p.edges = Fintype.card ↑(p.toSubgraph.neighborSet x) := by
+    apply Walk.concatRec (motive := fun v w p ↦ (x : V) → p.IsTrail → (List.countP (fun e ↦ decide (x ∈ e)) p.edges = Fintype.card ↑(p.toSubgraph.neighborSet x)))
+    · simp
+    · intros u v w h p' p_ih k iht
+      rw [h.edges_concat]
+      simp
+      rw [←Set.toFinset_card, h.concat_eq_append]
+      rw! (castMode := .all) [h.toSubgraph_append,SimpleGraph.Subgraph.neighborSet_sup]
+      rw [Set.toFinset_union , Finset.card_union]
+      simp
+      rw [←p_ih k]
+      rw [Nat.add_sub_assoc]
+      congr
+      by_cases hex : k = v ∨ k = w
+      · simp only [hex,decide_true,if_true]
+        rcases hex with (hxu | hxv)
+        · have := SimpleGraph.neighborSet_fst_subgraphOfAdj p'
+          rw! [hxu]
+          rw! (castMode := .all) [this]
+          simp
+          have : w ∉ h.toSubgraph.neighborSet v := by
+            rw [h.concat_eq_append ] at iht
+            by_contra hc
+            simp at hc
+            have e1: s(v , w) ∈ h.edges := by rw [h.adj_toSubgraph_iff_mem_edges] at hc; exact hc
+            have e2: s(v , w) ∈ (Walk.cons p' Walk.nil).edges := by simp [SimpleGraph.Walk.edges_cons]
+            rw [Walk.isTrail_def,h.edges_append,List.nodup_append] at iht
+            exact iht.2.2 _ e1 _ e2 (Eq.refl s(v ,w))
+              --have := h.toSubgraph.adj_sub hc
+              --have := h.mem_support_of_adj_toSubgraph hc
+          simp [this]
+        · have := SimpleGraph.neighborSet_snd_subgraphOfAdj p'
+          rw! [hxv]
+          rw! (castMode := .all) [this]
+          simp
+          have : v ∉ h.toSubgraph.neighborSet w := by
+            rw [h.concat_eq_append ] at iht
+            by_contra hc
+            simp at hc
+            have e1: s(w , v) ∈ h.edges := by rw [h.adj_toSubgraph_iff_mem_edges] at hc; exact hc
+            have e2: s(w , v) ∈ (Walk.cons p' Walk.nil).edges := by simp [SimpleGraph.Walk.edges_cons]
+            rw [Walk.isTrail_def,h.edges_append,List.nodup_append] at iht
+            exact iht.2.2 _ e1 _ e2 (Eq.refl s(w ,v))
+          simp [this]
+
+      . push Not at hex
+        simp [hex]
+      · rw [← Set.toFinset_card]
+        apply Finset.card_le_card
+        rw [inter_comm]
+        exact Finset.inter_subset_left (α := V)
+
+      · exact iht.of_append_left
+    · exact ht
+  rw [←this]
+  exact t1
 
 
 
-#check SimpleGraph.induce
 
-open Classical in
+
+
+
+
+
+
+
+
+
+--     simp only [Subgraph.neighborSet_sup,Walk.toSubgraph]
+--     rw [←Set.toFinset_card,Set.toFinset_union, Finset.card_union]
+--     nth_rw 2 [Set.toFinset_card]
+--     rw [←p_ih]
+--     rw [SimpleGraph.neighborSet_fst_subgraphOfAdj h]
+--     nth_rw 2 [add_comm]
+--     rw [Nat.add_sub_assoc]
+--     congr
+--     by_cases hex : k = u ∨ k = v
+--     · simp only [Sym2.mem_iff,hex,decide_true,if_true]
+--       rcases hex with (hxu | hxv)
+--       · have := SimpleGraph.neighborSet_fst_subgraphOfAdj h
+--         rw! [hxu]
+--         rw! (castMode := .all) [this]
+--         simp
+
+--         sorry
+
+--       · sorry
+
+
+
+--     · push Not at hex
+--       simp [hex]
+--     · apply Finset.card_le_card
+--       simp
+
+-- rw [←this]
+-- exact t1
+
+    --u v w h p p_ih
+
+
+
+
+
 /-- Removing the edges of a closed trail from a graph preserves even-degree parity at every
 vertex. More precisely, if every vertex of `G` has even degree and `W` is a circuit in `G`,
 then every vertex of `G.deleteEdges W.edgeSet` has even degree. -/
 lemma even_degree_deleteEdges_of_circuit
-    {v : V} {W : G.Walk v v} (hW : W.IsCycle)
+    {v : V} {W : G.Walk v v} (hW : W.IsCycle) [∀ u, ∀ S, Fintype ↑((G.deleteEdges S).neighborSet u)]
     (heven : ∀ u : V, Even (G.degree u)) :
     ∀ u : V, Even ((G.deleteEdges W.edgeSet).degree u) := by
   -- Each vertex u appears as an endpoint of edges in W an even number of times
   -- (since W is a closed trail, it enters and leaves u equally often).
   -- So degree_G(u) - degree_W(u) is even − even = even.
-  sorry
+    classical
+    intro w
+    have := test3 (G' := W.toSubgraph.spanningCoe) G (by simp; exact fun x hxe ↦  W.edges_subset_edgeSet hxe
+   )
+    specialize this w
+    rw  [←(by simp : @edgeSet V W.toSubgraph.spanningCoe = W.edgeSet)]
+    by_cases hw : w ∈ W.toSubgraph.spanningCoe.support
+    <;> simp [hw] at this
+    · rw [this]
+      rw [Nat.even_sub]
+      · refine ⟨fun _ ↦ ?_ , fun _ ↦ heven w⟩
+        rw [mem_support] at hw
+        obtain ⟨w1,haw⟩ := hw
 
+        have t1 := W.toSubgraph.spanningCoe_adj w w1
+        rw [t1] at haw
+        have := hW.ncard_neighborSet_toSubgraph_eq_two ( W.mem_support_of_adj_toSubgraph  haw)
+        rw [Set.ncard_eq_toFinset_card', W.toSubgraph.finset_card_neighborSet_eq_degree ] at this
+        rw [this]
+        exact even_two
+      · exact W.toSubgraph.degree_le w
+      /-
+      SimpleGraph.adj_of_mem_walk_support @ Mathlib.Combinatorics.SimpleGraph.Connectivity.Connected
+      {V : Type u} {G : SimpleGraph V} {u v : V} (p : G.Walk u v) (hp : ¬p.Nil) {x : V}
+      (hx : x ∈ p.support) : ∃ y ∈ p.support, G.Adj x y
+      -/
+
+    · rw [this]
+      exact heven w
+
+#check SimpleGraph.neighborSetFintype
+/-- Removing the edges of a closed trail from a graph preserves even-degree parity at every
+vertex. More precisely, if every vertex of `G` has even degree and `W` is a circuit in `G`,
+then every vertex of `G.deleteEdges W.edgeSet` has even degree. -/
+lemma even_degree_deleteEdges_of_trail
+    {v : V} {W : G.Walk v v} (hW : W.IsTrail) [∀ u, ∀ S, Fintype ↑((G.deleteEdges S).neighborSet u)]
+    (heven : ∀ u : V, Even (G.degree u))
+    [(w :V) → Decidable (w ∈ W.toSubgraph.spanningCoe.support)]
+    [(u : V) → Fintype ↑(W.toSubgraph.spanningCoe.neighborSet u)] :
+    ∀ u : V, Even ((G.deleteEdges W.edgeSet).degree u) := by
+  -- Each vertex u appears as an endpoint of edges in W an even number of times
+  -- (since W is a closed trail, it enters and leaves u equally often).
+  -- So degree_G(u) - degree_W(u) is even − even = even.
+    intro w
+    have := test3 (G' := W.toSubgraph.spanningCoe) G (by simp; exact fun x hxe ↦  W.edges_subset_edgeSet hxe
+   )
+    specialize this w
+    rw  [←(by simp : @edgeSet V W.toSubgraph.spanningCoe = W.edgeSet)]
+    by_cases hw : w ∈ W.toSubgraph.spanningCoe.support
+    <;> simp [hw] at this
+    · rw [this]
+      rw [Nat.even_sub]
+      · refine ⟨fun _ ↦ ?_ , fun _ ↦ heven w⟩
+        rw [mem_support] at hw
+        obtain ⟨w1,haw⟩ := hw
+
+        have t1 := W.toSubgraph.spanningCoe_adj w w1
+        rw [t1] at haw
+        exact t5 G hW w
+      · exact W.toSubgraph.degree_le w
+      /-
+      SimpleGraph.adj_of_mem_walk_support @ Mathlib.Combinatorics.SimpleGraph.Connectivity.Connected
+      {V : Type u} {G : SimpleGraph V} {u v : V} (p : G.Walk u v) (hp : ¬p.Nil) {x : V}
+      (hx : x ∈ p.support) : ∃ y ∈ p.support, G.Adj x y
+      -/
+
+    · rw [this]
+      exact heven w
+
+
+
+
+
+
+
+#check SimpleGraph.deleteEdges_eq_bot
+-- ∀ u ∈ W.support, (G'.deleteEdges W.edgeSet).degree u
+lemma SimpleGraph.Walk.deg_zero_of_del_Eulerian
+    {v : V} {W : G.Walk v v} (hW : W.IsTrail) [∀ u, ∀ S, Fintype ↑((G.deleteEdges S).neighborSet u)]
+    [(w :V) → Decidable (w ∈ W.toSubgraph.spanningCoe.support)]
+    [(u : V) → Fintype ↑(W.toSubgraph.spanningCoe.neighborSet u)] :
+    W.IsEulerian → (∀ u ∈ W.support, (G.deleteEdges W.edgeSet).degree u = 0) := by
+  refine fun hEw ↦ ?_
+  · rw [hW.isEulerian_iff] at hEw
+    rw [hEw]
+    have := G.deleteEdges_eq_bot (s := G.edgeSet ).mpr (subset_refl _)
+    rw! (castMode := .all) [this]
+    intro u huw
+    convert bot_degree u
+#check SimpleGraph.support
+#check G.edgeFinset
+#check maxOn_eq_if
+lemma SimpleGraph.Walk.Eulerian_of_deg_zero
+    {v : V} {W : G.Walk v v} (hW : W.IsTrail) [∀ u, ∀ S, Fintype ↑((G.deleteEdges S).neighborSet u)]
+    [(w :V) → Decidable (w ∈ W.toSubgraph.spanningCoe.support)]
+    [(u : V) → Fintype ↑(W.toSubgraph.spanningCoe.neighborSet u)]
+    (hconn : G.Connected) :
+    (∀ u ∈ W.support , (G.deleteEdges W.edgeSet).degree u = 0) → W.IsEulerian := by
+  intro hwu
+  rw [W.isEulerian_iff]
+  refine ⟨hW, ?_⟩
+  have aux (e : Sym2  V) (heG : e ∈ G.edgeSet) (x y : V) (hxye : s(x,y) = e):
+      letI x' := minOn (G.dist v) x y
+      x' ∈ W.support → s(x,y) ∈ W.edges := by
+    intro heS
+    set x' := minOn (G.dist v) x y with hx'
+    have := del_deg_zero_iff G (G' := W.toSubgraph.spanningCoe) (by rw [W.toSubgraph.edgeSet_spanningCoe]; intro x hx; exact W.toSubgraph.edgeSet_subset hx )
+    have hwu_x' := hwu x' heS
+    rw [← W.edgeSet_toSubgraph, ← W.toSubgraph.edgeSet_spanningCoe] at hwu_x'
+    have this_u := this x'
+    rw [this_u] at hwu_x'
+    have eq_or : x' = x ∨ x' = y := by
+      simp [hx',minOn_eq_or]
+    rcases eq_or with (hr | hr)
+    · rw [← hr]
+      rw [← hxye, ← hr, mem_edgeSet] at heG
+      specialize hwu_x' y
+      rw [← W.mem_edges_toSubgraph, ← W.toSubgraph.edgeSet_spanningCoe,mem_edgeSet]
+      exact (hwu_x' heG.symm).symm
+    · rw [← hr]
+      rw [← hxye, ← hr, mem_edgeSet] at heG
+      specialize hwu_x' x
+      rw [← W.mem_edges_toSubgraph, ← W.toSubgraph.edgeSet_spanningCoe,mem_edgeSet]
+      exact (hwu_x' heG)
+  intro e heG
+  refine e.rec (motive := fun e' ↦ (e' = e) → e' ∈ W.edges) ?_ (by simp) rfl
+  intros
+  intros
+  rename_i x y hxye
+  set x' := minOn (G.dist v) x y with hx'
+  have := del_deg_zero_iff G (G' := W.toSubgraph.spanningCoe) (by rw [W.toSubgraph.edgeSet_spanningCoe]; intro x hx; exact W.toSubgraph.edgeSet_subset hx )
+  suffices heS : x' ∈ W.support from aux e heG x y hxye heS
+  have ⟨p, hp, hplen⟩  := hconn.exists_path_of_dist v x'
+  refine Nat.recOn (motive :=
+     fun n ↦ (x  : V) → (y : V) → (heG : s(x, y) ∈ G.edgeSet) →
+     letI x' := minOn (G.dist v) x y; (p : G.Walk v x')
+     → (p.length = n) → (G.dist v x' = p.length) → x' ∈ W.support) p.length ?_ ?_ x y (hxye ▸ heG) p rfl hplen.symm
+  · intro a b e
+    set b' := minOn (G.dist v) a b with hb'
+    intro t h hd
+    have h0 : G.dist v b' = 0 := by
+      rw [hb']
+      grind [G.dist_le t]
+    have hdel := del_deg_zero_iff G (G' := W.toSubgraph.spanningCoe) (by rw [W.toSubgraph.edgeSet_spanningCoe]; intro x hx; exact W.toSubgraph.edgeSet_subset hx )
+    have hvs : v ∈ W.support := by exact W.start_mem_support
+    have hwu_v := hwu v hvs
+    have hwu_v' := hwu v hvs
+    have := hdel v
+    rw [←W.edgeSet_toSubgraph,← W.toSubgraph.edgeSet_spanningCoe] at hwu_v
+    rw [this] at hwu_v
+    specialize hwu_v a
+    --rw [← t.nil_iff_length_eq, t.nil_iff_support_eq] at h
+    rw [hconn.dist_eq_zero_iff] at h0
+    have eq_or : b' = a ∨ b' = b := by
+      simp [hb',minOn_eq_or]
+    rcases eq_or with (ha | ha)
+    · rw [mem_edgeSet] at e
+      rw [←W.edgeSet_toSubgraph,← W.toSubgraph.edgeSet_spanningCoe] at hwu_v'
+      have := hdel v |>.mp hwu_v'
+      have := this b
+      rw! (castMode := .all) [h0.trans ha] at this
+      specialize this e.symm
+      simp at this
+      rw [ha,W.mem_support_iff_exists_mem_edges]
+      exact Or.inl <| ha.symm.trans h0.symm
+
+    · rw [mem_edgeSet] at e
+      rw [←W.edgeSet_toSubgraph,← W.toSubgraph.edgeSet_spanningCoe] at hwu_v'
+      have := hdel v |>.mp hwu_v'
+      have := this a
+      rw! (castMode := .all) [h0.trans ha] at this
+      specialize this e
+      simp at this
+      rw [W.mem_support_iff_exists_mem_edges]
+      exact Or.inl h0.symm
+  · intro n n_ih x_1 y_1 heG_1 p_1 h h_1
+    have eq_or : minOn (G.dist v) x_1 y_1 = x_1 ∨ minOn (G.dist v) x_1 y_1 = y_1 := by
+      simp [minOn_eq_or]
+    rcases eq_or with (ha | ha)
+    · rw [ha]
+      set p_y : V := p_1.penultimate with hpy
+      have hpnil : ¬p_1.Nil := by
+        grind [p_1.nil_iff_length_eq]
+      have hpath := p_1.isPath_of_length_eq_dist h_1.symm
+      have hpath_d := hpath.drop 1
+      -- have heq_d : p_1.drop (-1) = p_1.dropLast
+      letI pmk (u : V) (hup : u ∈ p_1.support) := (p_1.reverse.dropUntil u (by simp [hup])).reverse
+      have pmk_p (u : V) (hup : u ∈ p_1.support) : (pmk u hup).IsPath := by
+        unfold pmk
+        rw [(p_1.reverse.dropUntil u _).isPath_reverse_iff]
+        apply (p_1.isPath_reverse_iff.mpr hpath).dropUntil (u := u)
+          (by rw [p_1.support_reverse,p_1.support.mem_reverse]; exact hup )
+      have hteq : (minOn (G.dist v) x_1 p_1.penultimate) = p_1.penultimate := by
+        -- d v p_y ≤ d v x_1
+        have : G.dist v p_1.penultimate < G.dist v x_1 := by
+          nth_rw 1 [ha] at h_1
+          rw [h_1]
+          have := G.dist_le p_1.dropLast
+          rw [p_1.length_dropLast] at this
+          apply lt_of_le_of_lt this
+          simp
+          by_contra!
+          simp at this
+          exact hpnil ((propext p_1.nil_iff_length_eq) ▸ this)
+        rw [minOn_eq_if]
+        simp [this]
+      set pmk' := pmk p_1.penultimate (by simp) with hpmk'
+      have pmkt : pmk'.IsPath := by
+        rw [hpmk']
+        apply pmk_p p_1.penultimate
+        rw [p_1.mem_support_iff_exists_mem_edges]
+        have := p_1.mk_penultimate_end_mem_edges hpnil
+        apply Or.inr
+        use s(p_1.penultimate, minOn (G.dist v) x_1 y_1)
+        simp [this]
+      have n_ih2 := n_ih x_1 p_1.penultimate (by
+        rw [mem_edgeSet, G.adj_comm]
+        convert p_1.adj_penultimate hpnil
+        exact ha.symm
+        )
+        (by
+            -- have that (G.dist v) x_1 ≤ (G.dist v) y_1
+            -- want (G.dist v) p_1.penultimate ≤ (G.dist v) x_1
+
+            have := p_1.copy rfl ha
+
+            have := hconn.dist_triangle (u := v) (w := p_1.penultimate) (v := x_1)
+            nth_rw 3 [← ha] at this
+            have hadj := p_1.adj_penultimate hpnil
+            have hadj := G.adj_symm hadj
+            rw [← G.dist_eq_one_iff_adj] at hadj
+            rw [hadj] at this
+            have := p_1.dropLast
+            exact this.copy rfl hteq.symm
+
+
+
+
+
+
+
+        )
+
+        (by simp [p_1.length_dropLast,h])
+        (by
+            /-
+           SimpleGraph.length_eq_dist_of_subwalk @ Mathlib.Combinatorics.SimpleGraph.Metric
+           {V : Type u_1} {G : SimpleGraph V} {u v u' v' : V} {p₁ : G.Walk u v}
+           {p₂ : G.Walk u' v'} (h₁ : p₁.length = G.dist u v)
+           (h₂ : p₂.IsSubwalk p₁) : p₂.length = G.dist u' v'
+            -/
+           simp
+           rw [hteq]
+           have pmkt1 := pmkt.getVert_eq_end_iff (i := pmk'.length) (by simp)
+           -- G.length_eq_dist_of_subwalk (p₁ := p_1) (u' := v) (v' := p_1.penultimate) h_1.symm (Walk.IsSubwalk.dropLast p_1)
+           have : p_1.dropLast.IsSubwalk p_1 := by
+             refine Walk.isSubwalk_iff_support_isInfix.mpr ?_
+             rw [← p_1.support_dropLast_concat hpnil]
+             exact List.infix_append_left
+           have := G.length_eq_dist_of_subwalk (p₁ := p_1) (u' := v) (v' := p_1.penultimate) h_1.symm (this)
+           rw [← this]
+           exact Walk.length_dropLast p_1
+        )
+      have := aux (e := s(x_1,p_1.penultimate))
+        (by
+             nth_rw 1 [← ha]
+             have := p_1.mk_penultimate_end_mem_edges hpnil
+             apply p_1.edges_subset_edgeSet
+             rwa [Sym2.eq_swap]
+        ) x_1 p_1.penultimate rfl n_ih2
+      rw [W.mem_support_iff_exists_mem_edges]
+      apply Or.inr ⟨s(x_1, p_1.penultimate), this, by simp⟩
+    · rw [ha]
+      set p_y : V := p_1.penultimate with hpy
+      have hpnil : ¬p_1.Nil := by
+        grind [p_1.nil_iff_length_eq]
+      have hpath := p_1.isPath_of_length_eq_dist h_1.symm
+      have hpath_d := hpath.drop 1
+      -- have heq_d : p_1.drop (-1) = p_1.dropLast
+      letI pmk (u : V) (hup : u ∈ p_1.support) := (p_1.reverse.dropUntil u (by simp [hup])).reverse
+      have pmk_p (u : V) (hup : u ∈ p_1.support) : (pmk u hup).IsPath := by
+        unfold pmk
+        rw [(p_1.reverse.dropUntil u _).isPath_reverse_iff]
+        apply (p_1.isPath_reverse_iff.mpr hpath).dropUntil (u := u)
+          (by rw [p_1.support_reverse,p_1.support.mem_reverse]; exact hup )
+      have hteq : (minOn (G.dist v) y_1 p_1.penultimate) = p_1.penultimate := by
+                -- d v p_y ≤ d v x_1
+        have : G.dist v p_1.penultimate < G.dist v y_1 := by
+          nth_rw 1 [ha] at h_1
+          rw [h_1]
+          have := G.dist_le p_1.dropLast
+          rw [p_1.length_dropLast] at this
+          apply lt_of_le_of_lt this
+          simp
+          by_contra!
+          simp at this
+          exact hpnil ((propext p_1.nil_iff_length_eq) ▸ this)
+        rw [minOn_eq_if]
+        simp [this]
+      set pmk' := pmk p_1.penultimate (by simp) with hpmk'
+      have pmkt : pmk'.IsPath := by
+        rw [hpmk']
+        apply pmk_p p_1.penultimate
+        rw [p_1.mem_support_iff_exists_mem_edges]
+        have := p_1.mk_penultimate_end_mem_edges hpnil
+        apply Or.inr
+        use s(p_1.penultimate, minOn (G.dist v) x_1 y_1)
+        simp [this]
+      have n_ih2 := n_ih y_1 p_1.penultimate (by
+        rw [mem_edgeSet, G.adj_comm]
+        convert p_1.adj_penultimate hpnil
+        exact ha.symm
+        )
+        (by
+            -- have that (G.dist v) x_1 ≤ (G.dist v) y_1
+            -- want (G.dist v) p_1.penultimate ≤ (G.dist v) x_1
+
+            have := p_1.copy rfl ha
+
+            have := hconn.dist_triangle (u := v) (w := p_1.penultimate) (v := y_1)
+            nth_rw 3 [← ha] at this
+            have hadj := p_1.adj_penultimate hpnil
+            have hadj := G.adj_symm hadj
+            rw [← G.dist_eq_one_iff_adj] at hadj
+            rw [hadj] at this
+            have := p_1.dropLast
+            exact this.copy rfl hteq.symm
+
+
+
+
+
+
+
+        )
+
+        (by simp [p_1.length_dropLast,h])
+        (by
+            /-
+           SimpleGraph.length_eq_dist_of_subwalk @ Mathlib.Combinatorics.SimpleGraph.Metric
+           {V : Type u_1} {G : SimpleGraph V} {u v u' v' : V} {p₁ : G.Walk u v}
+           {p₂ : G.Walk u' v'} (h₁ : p₁.length = G.dist u v)
+           (h₂ : p₂.IsSubwalk p₁) : p₂.length = G.dist u' v'
+            -/
+           simp
+           rw [hteq]
+           have pmkt1 := pmkt.getVert_eq_end_iff (i := pmk'.length) (by simp)
+           -- G.length_eq_dist_of_subwalk (p₁ := p_1) (u' := v) (v' := p_1.penultimate) h_1.symm (Walk.IsSubwalk.dropLast p_1)
+           have : p_1.dropLast.IsSubwalk p_1 := by
+             refine Walk.isSubwalk_iff_support_isInfix.mpr ?_
+             rw [← p_1.support_dropLast_concat hpnil]
+             exact List.infix_append_left
+           have := G.length_eq_dist_of_subwalk (p₁ := p_1) (u' := v) (v' := p_1.penultimate) h_1.symm (this)
+           rw [← this]
+           exact Walk.length_dropLast p_1
+        )
+      have := aux (e := s(y_1,p_1.penultimate))
+        (by
+             nth_rw 1 [← ha]
+             have := p_1.mk_penultimate_end_mem_edges hpnil
+             apply p_1.edges_subset_edgeSet
+             rwa [Sym2.eq_swap]
+        ) y_1 p_1.penultimate rfl n_ih2
+      rw [W.mem_support_iff_exists_mem_edges]
+      apply Or.inr ⟨s(y_1, p_1.penultimate), this, by simp⟩
+
+
+
+
+
+lemma Eulerian_iff_deg_zero
+    {v : V} {W : G.Walk v v} (hW : W.IsTrail) [∀ u, ∀ S, Fintype ↑((G.deleteEdges S).neighborSet u)]
+    [(w :V) → Decidable (w ∈ W.toSubgraph.spanningCoe.support)]
+    [(u : V) → Fintype ↑(W.toSubgraph.spanningCoe.neighborSet u)]
+    (hconn : G.Connected) : (∀ u ∈ W.support , (G.deleteEdges W.edgeSet).degree u = 0) ↔ W.IsEulerian :=
+  ⟨W.Eulerian_of_deg_zero G hW hconn, W.deg_zero_of_del_Eulerian G hW⟩
+
+
+
+section
+    --   haveI : Nontrivial V := by
+    --     apply G.nontrivial_of_degree_ne_zero (v := x_1)
+    --     rw [mem_edgeSet] at heG_1
+    --     intro hc
+    --     rw [G.degree_eq_zero,← G.neighborSet_eq_empty] at hc
+    --     rw [Set.eq_empty_iff_forall_notMem] at hc
+    --     specialize hc y_1
+    --     rw [G.mem_neighborSet] at hc
+    --     exact hc heG_1
+    --   by_cases hx_1 : x_1 = p_y
+    --   · rw [Sym2.eq_swap,hx_1]
+    --     exact n_ih2
+    -- · sorry
+
+
+    -- have := hconn.preconnected
+    -- have := this.exists_adj_of_nontrivial v
+
+
+
+  -- have := del_deg_zero_iff G (G' := W.toSubgraph.spanningCoe) (by rw [W.toSubgraph.edgeSet_spanningCoe]; intro x hx; exact W.toSubgraph.edgeSet_subset hx )
+  -- --first vertex in support
+  -- have hvs : v ∈ W.support := by exact W.start_mem_support
+  -- have hwu_v := hwu v hvs
+  -- have := this v
+  -- rw [←W.edgeSet_toSubgraph,← W.toSubgraph.edgeSet_spanningCoe] at hwu_v
+  -- rw [this] at hwu_v
+  --v is not isolated, either its only neighbour is on the og walk, which means
+  --we are still on the og walk, or there are at least two neighbours and one of which
+  --is in the y direction.
+
+  --use hwu_v to conclude it is on the OG walk as well, repeat to get the edge x,y is in W?
+
+
+
+end
+
+
+
+section
+
+
+
+
+  -- refine fun hEw ↦ ?_
+  -- · rw [hW.isEulerian_iff, Set.ext_iff]
+  --   intro x
+  --   cases x
+  --   expose_names
+  --   refine ⟨W.edges_subset_edgeSet (e := s(x, y)) ,?_⟩
+  --   intro hx
+  --   have t1 := W.edgeSet_toSubgraph ▸ W.toSubgraph.edgeSet_spanningCoe
+  --   have := del_deg_zero_iff G  (G' := W.toSubgraph.spanningCoe) (by rw [W.toSubgraph.edgeSet_spanningCoe];exact W.toSubgraph.edgeSet_subset )
+  --   rw [←t1] at hEw
+  --   specialize this x
+  --   specialize hEw x
+  --   rw [this] at hEw
+  --   specialize hEw y
+  --   rw [←t1]
+  --   rw [G.mem_edgeSet] at hx
+  --   specialize hEw (G.adj_comm x y |>.mp hx)
+  --   rw [adj_comm,← mem_edgeSet] at hEw
+  --   exact hEw
+
+
+    /-
+
+    Since x is not in the edge set, the connectedness of G means we can reach it from W
+
+    Start a Walk `W'` from any vertex `u` to `x`.
+
+    At every step, starting from u, the 0 degree ensures the vertex adjacent on the walk
+    must be in W.
+
+    This will lead to x being in W, a contradiction.
+
+
+    -/
+end
+
+#check SimpleGraph.Walk.isCycle_def
+#check SimpleGraph.Walk.IsCycle.ncard_neighborSet_toSubgraph_eq_two
 /-- If `W` is a non-Eulerian closed trail in a connected graph `G` with all even degrees,
 then there exists a vertex `u ∈ W.support` that is incident to an edge of `G` not in `W`.
 This is because `G` is connected and `W` does not cover all edges. -/
 lemma exists_support_adj_not_in_trail
-    {v : V} {W : G.Walk v v} (hW : W.IsCircuit)
+    {v : V} {W : G.Walk v v} (hW : W.IsCycle)
     (hconn : G.Connected) (hne : ¬W.IsEulerian) :
     ∃ u ∈ W.support, ∃ w : V,
       G.Adj u w ∧ s(u, w) ∉ W.edges := by
@@ -407,7 +1064,7 @@ lemma exists_support_adj_not_in_trail
 at `u` to produce a strictly longer circuit in `G`. -/
 lemma exists_longer_circuit_of_splice
     {v : V} {W : G.Walk v v} (hW : W.IsCircuit)
-    {u : V} (hu : u ∈ W.support)
+    {u : V} (hu : u ∈ W.support) [∀ u, ∀ S, Fintype ↑((G.deleteEdges S).neighborSet u)]
     {W' : (G.deleteEdges W.edgeSet).Walk u u} (hW' : W'.IsCircuit) :
     ∃ (w : V) (C : G.Walk w w), C.IsCircuit ∧
       W.length < C.length ∧ C.IsTrail := by
@@ -435,20 +1092,52 @@ We claim `W` is Eulerian. If not:
    all even degrees. By the inductive hypothesis, it has an Eulerian circuit `W'`.
 4. Splicing `W'` into `W` at `u` produces a strictly longer closed trail in `G`,
    contradicting the maximality of `W`. -/
+
+theorem map_isTrail_iff_of_injective.{u',v} {V : Type u'} {V' : Type v} {G : SimpleGraph V}
+  [DecidableEq V] [DecidableEq V'] {G' : SimpleGraph V'} {f : G →g G'} {u v : V} {p : G.Walk u v}
+  (hinj : Function.Injective f) :
+  (p.map f).IsTrail ↔ p.IsTrail := by
+  induction p with
+  | nil => simp only [Walk.map_nil, Walk.IsTrail.nil]
+  | cons _ _ ih =>
+    rw [Walk.map_cons, Walk.isTrail_cons, ih, Walk.isTrail_cons]
+    apply and_congr_right'
+    rw [← Sym2.map_mk, Walk.edges_map, ← List.mem_map_of_injective (Sym2.map.injective hinj)]
+
+theorem map_isEulerian_iff_of_injective.{u',v} {V : Type u'} {V' : Type v} {G : SimpleGraph V}
+  [DecidableEq V] [DecidableEq V'] {G' : SimpleGraph V'} {f : G →g G'} {u v : V} {p : G.Walk u v}
+  (hinj : Function.Injective f) :
+  (p.map f).IsEulerian ↔ p.IsEulerian := by
+  simp only [Walk.isEulerian_iff]
+  suffices h : (∀ e ∈ G'.edgeSet, e ∈ (Walk.map f p).edges) ↔ ∀ e ∈ G.edgeSet, e ∈ p.edges by
+    simp only [map_isTrail_iff_of_injective hinj, h]
+  induction p with
+  | nil =>
+      simp
+      refine ⟨fun hne ↦ (fun e hne' ↦ hne (Sym2.map (⇑f) e) (f.map_mem_edgeSet hne')), fun hne ↦ ?_⟩
+      · intro e hne'
+        have : Hom.subset_preimage_edgeSet f
+  | cons _ _ ih =>
+    rw [Walk.map_cons, Walk.isTrail_cons, ih, Walk.isTrail_cons]
+    apply and_congr_right'
+    rw [← Sym2.map_mk, Walk.edges_map, ← List.mem_map_of_injective (Sym2.map.injective hinj)]
+
+
 lemma exists_euler_circuit_of_connected_even_degree
     (hconn : G.Connected) [hne : Nonempty V]
     (heven : ∀ v : V, Even (G.degree v)) :
     ∃ (v : V) (w : G.Walk v v), w.IsEulerian := by
   -- We generalize and prove by strong induction on the number of edges.
-  suffices key : ∀ (n : ℕ) (G' : SimpleGraph V) [DecidableRel G'.Adj],
+  suffices key : ∀ (n : ℕ) {V : Type u} [Fintype V] [DecidableEq V] [hne : Nonempty V] (G' : SimpleGraph V) [∀G'' : Subgraph G', Fintype ↑G''.verts]
+      [∀G'' : Subgraph G',∀x, DecidablePred fun v_1 ↦ v_1 ∈ G''.neighborSet x] [DecidableRel G'.Adj],
       G'.Connected → (∀ v, Even (G'.degree v)) →
       #G'.edgeFinset = n →
       ∃ (v : V) (w : G'.Walk v v), w.IsEulerian from
-    key _ G hconn heven rfl
+    key (V := V) _ _  hconn heven rfl
   intro n
   induction n using Nat.strongRecOn with
   | ind n ih =>
-  intro G' _ hconn' heven' hn
+  intro V _ _ hne G' _ _ _ hconn' heven' hn
   -- ══════════════════════════════════════════════════════════════
   -- BASE CASE: n = 0 edges. The nil walk is vacuously Eulerian.
   -- ══════════════════════════════════════════════════════════════
@@ -504,6 +1193,7 @@ lemma exists_euler_circuit_of_connected_even_degree
     have := hWmax ⟨v, c, hc.isCircuit.isTrail, rfl⟩ (by omega)
     omega
   -- Step 3: Since W is a non-Eulerian trail, there exists an edge in G' not in W.
+  have hE' : ¬W.IsEulerian := by simp [hE]
   rw [Walk.isEulerian_iff] at hE
   push Not at hE
   obtain ⟨e₀, he₀mem, he₀nin⟩ := hE hWtrail
@@ -520,14 +1210,40 @@ lemma exists_euler_circuit_of_connected_even_degree
     -- This follows because W is a closed trail: for each vertex v, the number of
     -- edges of W incident to v is even (the walk enters and exits v equally often).
     -- Therefore deg_{G''}(v) = deg_{G'}(v) - deg_W(v) is even - even = even.
-    sorry
+    intro v
+    rw! (castMode := .all) [hG''def]
+    convert even_degree_deleteEdges_of_trail G' hWtrail heven' v
   -- Step 4b: By connectivity of G', there is a vertex u ∈ W.support that has
   -- an edge in G'' (i.e., an edge of G' not in W).
   have hexists_u : ∃ u ∈ W.support, 0 < G''.degree u := by
     -- Since G' is connected and e₀ ∈ G'.edgeSet \ W.edgeSet, and W is non-empty
     -- (as n > 0 and W is maximal), connectivity of G' ensures some vertex of W
     -- is incident to an edge not in W.
-    sorry
+    rw! (castMode := .all) [hG''def]
+    by_contra! hc
+    simp at hc
+    rw [Eulerian_iff_deg_zero G' (v := v₀) (W := W) hWtrail hconn'] at hc
+    exact hE' hc
+    -- have : W.edgeSet = W.toSubgraph.spanningCoe.edgeSet := by simp
+    -- rw [this] at hc
+    -- simp at hc
+    -- rw [Eulerian_iff_deg_zero G' (v := v₀) (W := W)] at hc
+    -- conv =>
+    --   rhs
+    --   intro u
+    --   rw [this u]
+    -- use W.getVert 0
+    -- simp
+    -- have : W.getVert 0 ∈ W.toSubgraph.spanningCoe.support := by
+    --   have := W.toSubgraph_adj_getVert (hWlen ▸ hm_pos)
+    --   rw [← W.toSubgraph.spanningCoe_adj] at this
+    --   rw [mem_support]
+    --   use W.getVert (0 + 1)
+    -- simp at this
+    -- conv =>
+    --   rhs
+    --   simp [this]
+    -- apply Nat.sub_pos_of_lt
   obtain ⟨u, hu_supp, hu_deg⟩ := hexists_u
   -- Step 4c: The connected component of G'' containing u has fewer edges than G',
   -- is connected, and has all even degrees. By the inductive hypothesis, it has
@@ -536,13 +1252,13 @@ lemma exists_euler_circuit_of_connected_even_degree
   -- G'' has strictly fewer edges than G':
   have hG''_lt : #G''.edgeFinset < n := by
     -- G''.edgeFinset ⊂ G'.edgeFinset since W has ≥ 1 edge (m > 0).
-    rw [hn]; apply Finset.card_lt_card
+    rw [←hn]; apply Finset.card_lt_card
     refine ⟨edgeFinset_mono (deleteEdges_le W.edgeSet), fun hsub => ?_⟩
     -- Some edge of W is in G' but not in G'' → contradicts hsub
     have hWne : W.edges ≠ [] :=
       Walk.edges_eq_nil.not.mpr (Walk.not_nil_iff_lt_length.mpr (hWlen ▸ hm_pos))
     have he₁mem : W.edges.head hWne ∈ W.edges := List.head_mem hWne
-    have he₁G' := (mem_edgeFinset G').mpr (W.edges_subset_edgeSet he₁mem)
+    have he₁G' := (G'.mem_edgeFinset (e := W.edges.head hWne)).mpr (W.edges_subset_edgeSet he₁mem)
     have he₁G'' := hsub he₁G'
     -- e₁ ∈ G''.edgeFinset, but e₁ ∈ W.edgeSet, contradicting deleteEdges
     rw [mem_edgeFinset] at he₁G''
@@ -558,7 +1274,34 @@ lemma exists_euler_circuit_of_connected_even_degree
   have ⟨W'_start, W', hW'euler⟩ : ∃ (w : V) (W' : G''.Walk w w), W'.IsEulerian := by
     -- Apply ih to the connected component of G'' containing u.
     -- That component has < n edges and all even degrees.
-    sorry
+    set uComp := ((G''.connectedComponentMk u).toSimpleGraph) with huc
+    --via C.toSubgraph.coe = uComp , #edgeset  C.toSubgrph = C.tosubgraph.coe , and ≤
+    have := (G''.connectedComponentMk u).coe_toSubgraph
+    haveI : ∀ u,  Fintype ↥(G''.connectedComponentMk u) := by
+      exact fun u ↦ Fintype.ofFinite ↥(G''.connectedComponentMk u)
+    haveI :  DecidableRel uComp.Adj := by exact Classical.decRel uComp.Adj
+    haveI : Fintype ↑uComp.edgeSet := by (expose_names; exact uComp.fintypeEdgeSet)
+
+    haveI :  (G''_1 : uComp.Subgraph) → Fintype ↑G''_1.verts := fun G''_1 ↦
+      Fintype.ofFinite ↑G''_1.verts
+    haveI : (G''_1 : uComp.Subgraph) → (x : ↥(G''.connectedComponentMk u)) → DecidablePred fun v_1 ↦ v_1 ∈ G''_1.neighborSet x := by
+      exact fun G''_1 x ↦ Classical.decPred fun v_1 ↦ v_1 ∈ G''_1.neighborSet x
+    have := (G''.connectedComponentMk u).connected_toSimpleGraph
+    haveI neucmp : ∀ u, Nonempty ↥(G''.connectedComponentMk u) := by
+      #check G.adj_of_mem_walk_support
+      #check this.exists_isPath ⟨u,ConnectedComponent.connectedComponentMk_mem⟩  ⟨v₀,by sorry⟩
+      sorry
+    have ih' := ih #uComp.edgeFinset ?_ uComp this sorry (by convert rfl)
+    obtain ⟨v1,v2,hW⟩ := ih'
+    use v1.val
+    refine ⟨?_,?_⟩
+    · exact v2.map (G''.connectedComponentMk u).toSimpleGraph_hom
+    · have htp := v2.map_isTrail_of_injective
+        (sorry : Function.Injective (G''.connectedComponentMk u).toSimpleGraph_hom) (hW.isTrail)
+      have := v2.support_map (G''.connectedComponentMk u).toSimpleGraph_hom
+
+
+
   -- Step 4d: Splice W' into W at u to get a strictly longer closed trail.
   -- Rotate W to start at u: W_rot : G'.Walk u u with W_rot.IsTrail and same length.
   let W_rot := W.rotate u hu_supp
